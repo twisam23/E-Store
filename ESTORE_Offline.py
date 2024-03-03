@@ -256,9 +256,6 @@ class StoreApp:
         self.combodata = None
     
     def show_bf1_options(self):
-        # Close the current dialogue box
-        self.root.withdraw()
-
         # Create a new dialog for BF-1 options
         bf1_dialog = tk.Toplevel(self.root)
         bf1_dialog.title("Blast Furnace-1 Options")
@@ -594,21 +591,30 @@ class StoreApp:
             for i, row in self.df.iterrows():
                 timestamp = row['Timestamp']
                 material = row['Material']
-                material_code = int(row['Material Code'])
+                material_code = str(row['Material Code'])  # Convert material code to string
                 quantity = int(row['Quantity'])
                 action = row['Action']
-                location= row['Location']
+                location = row['Location']
                 person_name = row['Person Name']
 
-
-                self.tree.insert('','end', values=[timestamp, material, material_code, quantity, action, location, person_name])
+                self.tree.insert('', 'end', values=[timestamp, material, material_code, quantity, action, location, person_name])
 
         else:
             print("Invalid log file format or no file selected.")
     
     def handle_action(self, action, quantity):
         selected_material = self.combodata.get()
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        current_time = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+
+        if hasattr(self, 'entry_date_time') and self.entry_date_time.get():
+            custom_time = self.entry_date_time.get()
+            try:
+                # Validate the custom time format
+                custom_time = datetime.strptime(custom_time, "%d-%m-%Y %H:%M:%S")
+                current_time = custom_time.strftime("%d-%m-%Y %H:%M:%S")
+            except ValueError:
+                messagebox.showerror("Error", "Invalid date and time format. Please enter in 'DD-MM-YYYY HH:MM:SS' format.")
+                return
 
         material_data = [item for item in self.elements if item[0] == selected_material]
         
