@@ -23,8 +23,8 @@ class StartDialog:
 
     def create_start_dialog(self):
         try:
-            image = Image.open("C:/Users/vyoma/Downloads/excelapp-main (1)/excelapp-main/E STORE-logos.jpeg")
-            image = image.resize((600, 600), Image.ANTIALIAS)
+            image = Image.open("C:/Users/2980653/Downloads/E-Store-main/E-Store-main/E STORE-logos.jpeg")
+            image = image.resize((600, 600), Image.LANCZOS)
             logo_image = ImageTk.PhotoImage(image)
 
             window_width, window_height = image.size
@@ -559,14 +559,41 @@ class StoreApp:
             self.tree.insert('', 'end', values=list(row))
 
     def display_logs(self):
-        # Read Excel file and create DataFrame
         if self.log_file_path and self.log_file_path.endswith(('.xlsx', '.xls')):
             excel_data = pd.read_excel(self.log_file_path)
             self.df = pd.DataFrame(excel_data)
-
+                
+            # Convert 'Timestamp' column to datetime objects
+            self.df['Timestamp'] = pd.to_datetime(self.df['Timestamp'], format='%d-%m-%Y %H:%M:%S')
+                
             # Create a new Tkinter window for displaying the table
             table_window = tk.Toplevel(self.root)
             table_window.title('Requirements Logs')
+
+            # Create a frame for date selection
+            date_frame = tk.Frame(table_window)
+            date_frame.pack(padx=10, pady=10)
+
+            # Label and entry for start date
+            start_date_label = ttk.Label(date_frame, text="Start Date:")
+            start_date_label.grid(row=0, column=0, padx=5, pady=5)
+            start_date_entry = ttk.Entry(date_frame)
+            start_date_entry.grid(row=0, column=1, padx=5, pady=5)
+
+            # Label and entry for end date
+            end_date_label = ttk.Label(date_frame, text="End Date:")
+            end_date_label.grid(row=0, column=2, padx=5, pady=5)
+            end_date_entry = ttk.Entry(date_frame)
+            end_date_entry.grid(row=0, column=3, padx=5, pady=5)
+
+            start_date_entry.bind('<Return>', lambda event: confirm_button.invoke())
+            end_date_entry.bind('<Return>', lambda event: confirm_button.invoke())
+            
+            # Button to confirm date range and display logs
+            confirm_button = ttk.Button(date_frame, text="Show Logs", command=lambda: self.show_logs_within_date_range(start_date_entry.get(), end_date_entry.get(), start_date_entry, end_date_entry, table_window))
+            confirm_button.grid(row=0, column=4, padx=5, pady=5)
+
+            confirm_button.bind('<Return>', lambda event=None: confirm_button.invoke())
 
             # Create Treeview widget
             self.tree = ttk.Treeview(table_window, columns=['Timestamp', 'Material', 'Material Code', 'Quantity', 'Action', 'Location', 'Person Name'], show='headings')
@@ -589,7 +616,7 @@ class StoreApp:
 
             # Insert data into the Treeview
             for i, row in self.df.iterrows():
-                timestamp = row['Timestamp']
+                timestamp = row['Timestamp'].strftime('%d-%m-%Y %H:%M:%S')
                 material = row['Material']
                 material_code = str(row['Material Code'])  # Convert material code to string
                 quantity = int(row['Quantity'])
@@ -601,7 +628,52 @@ class StoreApp:
 
         else:
             print("Invalid log file format or no file selected.")
-    
+
+    def show_logs_within_date_range(self, start_date_str, end_date_str, start_date_entry, end_date_entry, table_window):
+        if not start_date_str and not end_date_str:
+            # Both date entries are empty, display all logs again
+            for item in self.tree.get_children():
+                self.tree.delete(item)
+
+            # Insert all data into the Treeview
+            for i, row in self.df.iterrows():
+                timestamp = row['Timestamp']
+                material = row['Material']
+                material_code = str(row['Material Code'])  # Convert material code to string
+                quantity = int(row['Quantity'])
+                action = row['Action']
+                location = row['Location']
+                person_name = row['Person Name']
+
+                self.tree.insert('', 'end', values=[timestamp, material, material_code, quantity, action, location, person_name])
+        else:
+            try:
+                # Convert string dates to datetime objects
+                start_date = datetime.strptime(start_date_str, "%d-%m-%Y")
+                end_date = datetime.strptime(end_date_str, "%d-%m-%Y")
+
+                # Filter log data within the specified date range
+                filtered_logs = self.df[(self.df['Timestamp'] >= start_date) & (self.df['Timestamp'] <= end_date)]
+
+                # Clear existing Treeview data
+                for item in self.tree.get_children():
+                    self.tree.delete(item)
+
+                # Insert filtered data into the Treeview
+                for i, row in filtered_logs.iterrows():
+                    timestamp = row['Timestamp']
+                    material = row['Material']
+                    material_code = str(row['Material Code'])  # Convert material code to string
+                    quantity = int(row['Quantity'])
+                    action = row['Action']
+                    location = row['Location']
+                    person_name = row['Person Name']
+
+                    self.tree.insert('', 'end', values=[timestamp, material, material_code, quantity, action, location, person_name])
+
+            except ValueError:
+                messagebox.showerror("Error", "Invalid date format. Please enter dates in 'DD-MM-YYYY' format.")
+
     def handle_action(self, action, quantity):
         selected_material = self.combodata.get()
         current_time = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
